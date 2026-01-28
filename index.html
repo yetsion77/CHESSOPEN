@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>שחמט - למד ותרגל</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Chess.js Local -->
+    <script src="chess.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <h1>שחמט - למד ותרגל</h1>
+        </header>
+
+        <div class="main-content">
+            <div id="board-container" class="board-container">
+                <!-- Board will be generated here -->
+                <div id="board" class="board"></div>
+            </div>
+
+            <aside class="controls-panel">
+                <div class="status-box">
+                    <h3>תור: <span id="turn-indicator">לבן</span></h3>
+                    <p id="game-status"></p>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="record-mode">הקלטה</button>
+                    <button class="tab-btn" data-tab="practice-mode">תרגול</button>
+                </div>
+
+                <div id="record-mode" class="tab-content active">
+                    <div class="actions">
+                        <button id="reset-btn" class="btn secondary">לוח חדש</button>
+                        <button id="undo-btn" class="btn secondary">בטל מהלך</button>
+                    </div>
+
+                    <div class="playback-controls"
+                        style="display:none; margin-top: 10px; background: #333; padding: 10px; border-radius: 4px;">
+                        <span style="font-size: 0.9em; margin-left: 5px;">צפייה ברצף:</span>
+                        <div style="display: flex; gap: 5px; margin-top: 5px;">
+                            <button id="play-btn" class="btn primary" style="padding: 5px 10px;">▶ נגן</button>
+                            <button id="pause-btn" class="btn secondary" style="padding: 5px 10px;">⏸ עצור</button>
+                            <button id="next-move-btn" class="btn secondary" style="padding: 5px 10px;">⏩</button>
+                        </div>
+                    </div>
+
+                    <div class="save-load-section">
+                        <input type="text" id="sequence-name" placeholder="שם הרצף (למשל: פתיחה ספרדית)">
+                        <button id="save-btn" class="btn primary">שמור רצף</button>
+                    </div>
+
+                    <div class="saved-list">
+                        <h4>רצפים שמורים:</h4>
+                        <ul id="sequences-list"></ul>
+                    </div>
+                </div>
+
+                <div id="practice-mode" class="tab-content">
+                    <div class="practice-controls">
+                        <select id="practice-select">
+                            <option value="">בחר רצף לתרגול...</option>
+                        </select>
+                        <button id="start-practice-btn" class="btn primary">התחל תרגול</button>
+                    </div>
+                    <div id="practice-feedback" class="feedback-msg"></div>
+                    <button id="show-hint-btn" class="btn secondary"
+                        style="display:none; width: 100%; margin-top: 5px;">💡 הצג רמז</button>
+                </div>
+
+                <div class="history-section">
+                    <h4>מהלכים:</h4>
+                    <div id="move-history" class="move-history"></div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>
