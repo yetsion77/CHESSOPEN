@@ -1,5 +1,5 @@
-# Chess Learning App (Hebrew)
-# אפליקציית לימוד שחמט
+# Ashkuki - Selected Move Sequences (Hebrew)
+# אשקוקי - רצפי מהלכים נבחרים
 
 A interactive web application for recording, saving, and practicing chess move sequences. Built with HTML, CSS, JavaScript (Vanilla), and Firebase Realtime Database.
 
