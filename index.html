@@ -104,13 +104,19 @@
                             <div style="text-align: center;">
                                 <div style="font-size: 0.8em; color: #aaa;">לבן (אני)</div>
                                 <div id="white-player-name" style="font-weight: bold; font-size: 1.1em;">-</div>
-                                <div id="white-score" style="font-size: 2em; color: var(--success-color);">0</div>
+                                <div id="white-score" style="font-size: 1.5em; color: var(--success-color);">0</div>
+                                <div id="white-timer"
+                                    style="font-family: monospace; font-size: 1.2em; color: #fff; margin-top:5px;">10:00
+                                </div>
                             </div>
                             <div style="display: flex; align-items: center; color: #666; font-size: 1.5em;">VS</div>
                             <div style="text-align: center;">
                                 <div style="font-size: 0.8em; color: #aaa;">שחור</div>
                                 <div id="black-player-name" style="font-weight: bold; font-size: 1.1em;">ממתין...</div>
-                                <div id="black-score" style="font-size: 2em; color: var(--success-color);">0</div>
+                                <div id="black-score" style="font-size: 1.5em; color: var(--success-color);">0</div>
+                                <div id="black-timer"
+                                    style="font-family: monospace; font-size: 1.2em; color: #fff; margin-top:5px;">10:00
+                                </div>
                             </div>
                         </div>
                         <div id="online-status-msg" style="margin-top: 10px; text-align: center; color: #ffeb3b;"></div>
@@ -124,6 +130,19 @@
                     <div id="move-history" class="move-history"></div>
                 </div>
             </aside>
+        </div>
+    </div>
+
+    <!-- Promotion Modal -->
+    <div id="promotion-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3>בחר כלי להכתרה</h3>
+            <div class="promotion-choices">
+                <div class="promotion-piece" data-piece="q">♕ מלכה</div>
+                <div class="promotion-piece" data-piece="r">♖ צריח</div>
+                <div class="promotion-piece" data-piece="b">♗ רץ</div>
+                <div class="promotion-piece" data-piece="n">♘ פרש</div>
+            </div>
         </div>
     </div>
 

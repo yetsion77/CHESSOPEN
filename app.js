@@ -196,7 +196,36 @@ function updateStatus() {
 
     statusEl.innerText = status;
     turnEl.innerText = moveColor;
-    document.getElementById('move-history').innerText = game.pgn();
+    statusEl.innerText = status;
+    turnEl.innerText = moveColor;
+    renderMoveHistory();
+}
+
+function renderMoveHistory() {
+    const history = game.history();
+    const historyEl = document.getElementById('move-history');
+
+    let html = '<table class="history-table"><tr><th>#</th><th>לבן</th><th>שחור</th></tr>';
+
+    for (let i = 0; i < history.length; i += 2) {
+        const num = (i / 2) + 1;
+        const whiteMove = history[i];
+        const blackMove = history[i + 1] || '';
+
+        html += `<tr>
+            <td class="move-num">${num}.</td>
+            <td>${whiteMove}</td>
+            <td>${blackMove}</td>
+        </tr>`;
+    }
+
+    html += '</table>';
+    historyEl.innerHTML = html;
+
+    // Auto scroll to bottom
+    const parent = historyEl.parentElement; // history-section usually has overflow?? No, history-section limits height.
+    // Use .history-section from CSS
+    historyEl.scrollTop = historyEl.scrollHeight;
 }
 
 
@@ -563,6 +592,12 @@ function startRematch() {
     set(ref(db, `games/${onlineGameId}/fen`), game.fen());
     set(ref(db, `games/${onlineGameId}/pgn`), '');
     set(ref(db, `games/${onlineGameId}/status`), 'playing');
+
+    // Reset Times
+    set(ref(db, `games/${onlineGameId}/white/time`), 600);
+    set(ref(db, `games/${onlineGameId}/black/time`), 600);
+    set(ref(db, `games/${onlineGameId}/lastMoveTime`), Date.now());
+
     document.getElementById('rematch-btn').style.display = 'none';
 }
 
@@ -616,6 +651,14 @@ function setupEventListeners() {
     if (codeDisplay) codeDisplay.addEventListener('click', (e) => {
         navigator.clipboard.writeText(e.target.innerText);
         alert('הקוד הועתק!');
+    });
+
+    // Promotion Modal Choices
+    document.querySelectorAll('.promotion-piece').forEach(el => {
+        el.addEventListener('click', (e) => {
+            const piece = e.target.getAttribute('data-piece');
+            handlePromotionChoice(piece);
+        });
     });
 
     document.querySelectorAll('.tab-btn').forEach(btn => {

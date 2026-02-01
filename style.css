@@ -1,77 +1,77 @@
+/* ... Existing Styles ... */
 :root {
     --bg-color: #1a1a1a;
-    --text-color: #e0e0e0;
-    --board-light: #eeeed2;
-    --board-dark: #769656;
-    --highlight: #baca44;
-    --primary-btn: #4caf50;
-    --primary-btn-hover: #45a049;
-    --secondary-btn: #555;
-    --secondary-btn-hover: #666;
     --panel-bg: #2a2a2a;
-    --border-color: #444;
+    --text-color: #e0e0e0;
+    --highlight: #ffeb3b;
+    --primary-color: #4CAF50;
+    --secondary-color: #f44336;
+    --board-light: #f0d9b5;
+    --board-dark: #b58863;
+    --selected-color: rgba(255, 255, 0, 0.5);
+    --hint-color: rgba(0, 0, 0, 0.2);
+    --success-color: #8bc34a;
     --error-color: #ff5252;
-    --success-color: #4caf50;
-    --font-main: 'Rubik', sans-serif;
-}
-
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
 }
 
 body {
-    font-family: var(--font-main);
+    font-family: 'Rubik', sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
-    direction: rtl;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     min-height: 100vh;
+    direction: rtl;
 }
 
 .app-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 95%;
+    /* Increased width */
     max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
+    gap: 20px;
 }
 
-header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-h1 {
+header h1 {
+    margin: 10px 0;
     font-weight: 500;
-    color: #fff;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    color: var(--highlight);
 }
 
 .main-content {
     display: flex;
-    gap: 30px;
+    gap: 20px;
+    width: 100%;
     justify-content: center;
     flex-wrap: wrap;
+    /* Responsive */
 }
 
-/* Board Styling */
+/* Board */
 .board-container {
     flex: 0 0 auto;
-    user-select: none;
+    width: min(80vw, 600px);
+    /* Responsive board */
+    height: min(80vw, 600px);
 }
 
 .board {
     display: grid;
-    grid-template-columns: repeat(8, 60px);
-    grid-template-rows: repeat(8, 60px);
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    width: 100%;
+    height: 100%;
     border: 5px solid #444;
-    border-radius: 4px;
+    user-select: none;
     direction: ltr;
-    /* Important: Keep board Left-to-Right even in Hebrew mode */
+    /* Board must be LTR */
 }
 
 .square {
-    width: 60px;
-    height: 60px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -81,129 +81,109 @@ h1 {
 
 .white-square {
     background-color: var(--board-light);
-    color: var(--board-dark);
-    /* For coordinates if needed */
+    color: #333;
 }
 
 .black-square {
     background-color: var(--board-dark);
-    color: var(--board-light);
+    color: #ccc;
 }
 
 .highlight {
-    box-shadow: inset 0 0 0 4px rgba(255, 255, 0, 0.5);
-}
-
-.move-hint {
-    background: radial-gradient(rgba(0, 0, 0, 0.3) 19%, transparent 20%);
+    background-color: var(--selected-color) !important;
 }
 
 .piece {
-    width: 50px;
-    height: 50px;
-    background-size: cover;
-    z-index: 2;
-    transition: transform 0.1s ease;
+    width: 90%;
+    height: 90%;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    pointer-events: none;
+    /* Let clicks pass to square */
 }
 
-.piece.dragging {
-    opacity: 0.8;
-    cursor: grabbing;
+.move-hint {
+    background-color: var(--hint-color);
+    border-radius: 50%;
+    transform: scale(0.3);
 }
 
-/* Sidebar Styling */
+/* Controls Panel */
 .controls-panel {
     flex: 1;
     min-width: 300px;
-    max-width: 400px;
-    background-color: var(--panel-bg);
+    background: var(--panel-bg);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    max-height: 80vh;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 15px;
 }
 
 .status-box {
+    margin-bottom: 20px;
+    text-align: center;
     background: #333;
     padding: 10px;
     border-radius: 4px;
-    text-align: center;
-    font-size: 1.1em;
 }
 
+.status-box h3 {
+    margin: 5px 0;
+}
+
+#game-status {
+    color: var(--highlight);
+    font-weight: bold;
+}
+
+/* Tabs */
 .tabs {
     display: flex;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #444;
 }
 
 .tab-btn {
     flex: 1;
     background: none;
     border: none;
-    padding: 10px;
     color: #888;
+    padding: 10px;
     cursor: pointer;
     font-family: inherit;
-    font-weight: 500;
-    transition: color 0.2s, border-bottom 0.2s;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: color 0.3s;
 }
 
 .tab-btn.active {
-    color: #fff;
-    border-bottom: 2px solid var(--primary-btn);
+    color: var(--highlight);
+    border-bottom: 3px solid var(--highlight);
 }
 
 .tab-content {
     display: none;
-    flex-direction: column;
-    gap: 10px;
 }
 
 .tab-content.active {
-    display: flex;
+    display: block;
 }
 
+/* Buttons */
 .btn {
-    padding: 10px 15px;
     border: none;
+    padding: 10px 20px;
     border-radius: 4px;
     cursor: pointer;
     font-family: inherit;
-    font-weight: 500;
-    transition: background-color 0.2s;
-    font-size: 0.9em;
-}
-
-.primary {
-    background-color: var(--primary-btn);
-    color: white;
-}
-
-.primary:hover {
-    background-color: var(--primary-btn-hover);
-}
-
-.secondary {
-    background-color: var(--secondary-btn);
-    color: white;
-}
-
-.secondary:hover {
-    background-color: var(--secondary-btn-hover);
-}
-
-input[type="text"],
-select {
+    font-weight: bold;
+    font-size: 1rem;
+    transition: background 0.2s;
     width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    background-color: #333;
-    color: white;
-    border-radius: 4px;
-    font-family: inherit;
     margin-bottom: 10px;
 }
 
@@ -212,77 +192,211 @@ select {
     gap: 10px;
 }
 
-.saved-list,
-.history-section {
-    flex: 1;
+.actions .btn {
+    width: 50%;
+}
+
+.primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.primary:hover {
+    background-color: #43a047;
+}
+
+.secondary {
+    background-color: #555;
+    color: white;
+}
+
+.secondary:hover {
+    background-color: #666;
+}
+
+/* Inputs */
+input[type="text"],
+select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #333;
+    border: 1px solid #555;
+    color: white;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+/* Lists */
+#sequences-list {
+    list-style: none;
+    padding: 0;
+    max-height: 150px;
     overflow-y: auto;
     background: #222;
-    padding: 10px;
     border-radius: 4px;
-    max-height: 200px;
 }
 
-.saved-list ul {
-    list-style: none;
-}
-
-.saved-list li {
-    padding: 8px;
+#sequences-list li {
+    padding: 8px 10px;
     border-bottom: 1px solid #333;
-    cursor: pointer;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
 }
 
-.saved-list li:hover {
-    background-color: #333;
+#sequences-list li:hover {
+    background: #333;
 }
 
 .delete-seq {
-    color: var(--error-color);
+    color: #ff5252;
     cursor: pointer;
-    margin-right: 10px;
-}
-
-.move-history {
-    font-family: monospace;
-    font-size: 1em;
-    line-height: 1.4;
-    white-space: pre-wrap;
-}
-
-.feedback-msg {
-    padding: 10px;
-    margin-top: 10px;
-    border-radius: 4px;
     font-weight: bold;
+    padding: 2px 5px;
+}
+
+.delete-seq:hover {
+    background: rgba(255, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+/* Feedback */
+.feedback-msg {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
     text-align: center;
-    min-height: 40px;
+    background: #333;
+    min-height: 20px;
 }
 
 .feedback-success {
-    background-color: rgba(76, 175, 80, 0.2);
+    background: rgba(76, 175, 80, 0.2);
     color: var(--success-color);
 }
 
 .feedback-error {
-    background-color: rgba(255, 82, 82, 0.2);
+    background: rgba(244, 67, 54, 0.2);
     color: var(--error-color);
 }
 
-@media (max-width: 600px) {
-    .board {
-        grid-template-columns: repeat(8, 11vw);
-        grid-template-rows: repeat(8, 11vw);
+/* History */
+.history-section {
+    margin-top: 20px;
+    background: #222;
+    padding: 10px;
+    border-radius: 4px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.history-section h4 {
+    margin-top: 0;
+}
+
+.move-history {
+    font-family: monospace;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    font-size: 0.9em;
+    color: #aaa;
+}
+
+/* History Table Styles (New) */
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+.history-table th {
+    text-align: center;
+    color: #888;
+    border-bottom: 1px solid #444;
+    padding: 5px;
+}
+
+.history-table td {
+    padding: 4px 8px;
+    text-align: center;
+    color: #ccc;
+    border-bottom: 1px solid #333;
+}
+
+.history-table tr:nth-child(even) {
+    background: #2a2a2a;
+}
+
+.history-table .move-num {
+    color: #666;
+    width: 30px;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: var(--panel-bg);
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    border: 1px solid #444;
+}
+
+.promotion-choices {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+    justify-content: center;
+}
+
+.promotion-piece {
+    font-size: 3rem;
+    /* Using text characters for simplicity, or could use images */
+    cursor: pointer;
+    padding: 10px;
+    background: #333;
+    border-radius: 8px;
+    transition: transform 0.2s, background 0.2s;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.promotion-piece:hover {
+    background: #444;
+    transform: scale(1.1);
+    color: var(--highlight);
+}
+
+@media (max-width: 800px) {
+    .app-container {
+        width: 100%;
     }
 
-    .square {
-        width: 11vw;
-        height: 11vw;
+    .main-content {
+        flex-direction: column;
+        align-items: center;
     }
 
-    .piece {
-        width: 10vw;
-        height: 10vw;
+    .controls-panel {
+        width: 90%;
     }
 }
