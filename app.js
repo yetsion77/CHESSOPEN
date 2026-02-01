@@ -403,6 +403,170 @@ function updatePracticeFeedback(msg, type) {
 }
 
 
+// --- Online Multiplayer State ---
+let onlineGameId = null;
+let playerSide = 'white'; // 'white' (creator) or 'black' (joiner)
+let myPlayerName = 'אורח';
+
+
+// --- Online Logic ---
+
+function createGame() {
+    const name = document.getElementById('player-name').value.trim() || 'שחקן 1';
+    myPlayerName = name;
+
+    // Generate simple 6-digit ID
+    const gameId = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const initialGameData = {
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        pgn: '',
+        white: { name: name, wins: 0 },
+        black: { name: 'ממתין...', wins: 0 },
+        turn: 'w',
+        status: 'waiting', // waiting, playing, finished
+        lastMove: null
+    };
+
+    set(ref(db, 'games/' + gameId), initialGameData)
+        .then(() => {
+            onlineGameId = gameId;
+            playerSide = 'white';
+
+            // Switch to game view
+            setupOnlineGameUI();
+            listenToGame(gameId);
+        });
+}
+
+function joinGame() {
+    const name = document.getElementById('player-name').value.trim() || 'שחקן 2';
+    myPlayerName = name;
+
+    const code = document.getElementById('game-code-input').value.trim();
+    if (!code) return alert('אנא הכנס קוד משחק');
+
+    // Check if game exists
+    const gameRef = ref(db, 'games/' + code);
+
+    // Read once
+    onValue(gameRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+            alert('המשחק לא נמצא');
+            return;
+        }
+
+        // Update Black player
+        // Note: we only want to do this ONCE.
+        if (data.status === 'waiting') {
+            set(ref(db, `games/${code}/black`), { name: name, wins: 0 });
+            set(ref(db, `games/${code}/status`), 'playing');
+        }
+
+        onlineGameId = code;
+        playerSide = 'black';
+
+        setupOnlineGameUI();
+        listenToGame(code);
+
+    }, { onlyOnce: true });
+}
+
+function listenToGame(gameId) {
+    const gameRef = ref(db, 'games/' + gameId);
+
+    onValue(gameRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+
+        // Sync Game State
+        if (data.fen !== game.fen()) {
+            game.load(data.fen);
+            renderBoard();
+            updateStatus(); // Updates history text
+        }
+
+        // Update UI info
+        document.getElementById('white-player-name').innerText = data.white.name;
+        document.getElementById('white-score').innerText = data.white.wins;
+
+        document.getElementById('black-player-name').innerText = data.black.name;
+        document.getElementById('black-score').innerText = data.black.wins;
+
+        // Update Status Msg
+        const statusMsg = document.getElementById('online-status-msg');
+        if (data.status === 'waiting') {
+            statusMsg.innerText = 'ממתין ליריב...';
+        } else if (data.status === 'playing') {
+            const isMyTurn = (game.turn() === 'w' && playerSide === 'white') ||
+                (game.turn() === 'b' && playerSide === 'black');
+            statusMsg.innerText = isMyTurn ? 'תורך!' : 'תור היריב';
+        } else if (data.status === 'finished') {
+            statusMsg.innerText = 'המשחק נגמר!';
+            document.getElementById('rematch-btn').style.display = 'block';
+        }
+    });
+}
+
+function handleOnlineMove(move) {
+    if (!onlineGameId) return;
+
+    // Update Firebase
+    const newFen = game.fen();
+    const newPgn = game.pgn();
+
+    set(ref(db, `games/${onlineGameId}/fen`), newFen);
+    set(ref(db, `games/${onlineGameId}/pgn`), newPgn);
+    set(ref(db, `games/${onlineGameId}/turn`), game.turn());
+    set(ref(db, `games/${onlineGameId}/lastMove`), move);
+
+    // Check Game Over
+    if (game.game_over()) {
+        set(ref(db, `games/${onlineGameId}/status`), 'finished');
+
+        // Update score if checkmate
+        if (game.in_checkmate()) {
+            const winner = game.turn() === 'b' ? 'white' : 'black';
+
+            if (playerSide === winner) {
+                const currentWins = parseInt(document.getElementById(`${winner}-score`).innerText) || 0;
+                set(ref(db, `games/${onlineGameId}/${winner}/wins`), currentWins + 1);
+            }
+        }
+    }
+}
+
+function setupOnlineGameUI() {
+    document.getElementById('online-setup').style.display = 'none';
+    document.getElementById('online-lobby').style.display = 'block';
+    document.getElementById('online-game-ui').style.display = 'block';
+
+    document.getElementById('display-game-code').innerText = onlineGameId;
+
+    // Reset Board for new game
+    if (playerSide === 'white') {
+        game.reset();
+        renderBoard();
+        updateStatus();
+    }
+
+    // Update Labels
+    document.querySelector('#online-game-ui #white-player-name').innerText = (playerSide === 'white' ? myPlayerName : 'יריב');
+}
+
+
+function startRematch() {
+    if (!onlineGameId) return;
+    // Reset logic
+    game.reset();
+    set(ref(db, `games/${onlineGameId}/fen`), game.fen());
+    set(ref(db, `games/${onlineGameId}/pgn`), '');
+    set(ref(db, `games/${onlineGameId}/status`), 'playing');
+    document.getElementById('rematch-btn').style.display = 'none';
+}
+
+
 // --- Event Listeners ---
 function setupEventListeners() {
     document.getElementById('reset-btn').addEventListener('click', () => {
@@ -437,6 +601,23 @@ function setupEventListeners() {
 
     document.getElementById('show-hint-btn').addEventListener('click', showHint);
 
+    // Online Buttons
+    const createBtn = document.getElementById('create-game-btn');
+    if (createBtn) createBtn.addEventListener('click', createGame);
+
+    const joinBtn = document.getElementById('join-game-btn');
+    if (joinBtn) joinBtn.addEventListener('click', joinGame);
+
+    const rematchBtn = document.getElementById('rematch-btn');
+    if (rematchBtn) rematchBtn.addEventListener('click', startRematch);
+
+    // Display Code Copy
+    const codeDisplay = document.getElementById('display-game-code');
+    if (codeDisplay) codeDisplay.addEventListener('click', (e) => {
+        navigator.clipboard.writeText(e.target.innerText);
+        alert('הקוד הועתק!');
+    });
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -449,8 +630,16 @@ function setupEventListeners() {
             if (tabId === 'record-mode') {
                 currentMode = 'record';
                 updatePracticeFeedback("", 'neutral');
+            } else if (tabId === 'online-mode') {
+                currentMode = 'online';
+                // If we are already in a game, ensure board is sync
+                if (onlineGameId) {
+                    // Logic to maybe restore board state if we navigated away?
+                    // For now, assume single page app persistence
+                }
             } else {
                 stopPlayback();
+                currentMode = 'practice';
             }
         });
     });
