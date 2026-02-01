@@ -99,8 +99,23 @@ function renderBoard() {
 }
 
 function handleSquareClick(square) {
+    // Online Check
+    if (currentMode === 'online') {
+        // Prevent if waiting
+        if (document.getElementById('online-status-msg').innerText.includes('ממתין')) return;
+
+        // Prevent if not my turn
+        const isMySideWhite = playerSide === 'white';
+        const isWhiteTurn = game.turn() === 'w';
+
+        if (isMySideWhite !== isWhiteTurn) {
+            // Not my turn
+            return;
+        }
+    }
+
     if (currentMode === 'practice' && game.turn() !== practiceTargetSequence[practiceMoveIndex]?.color) {
-        // Allow interaction but context matters
+        // ... practice check ...
     }
 
     if (!selectedSquare) {
@@ -147,12 +162,23 @@ function highlightLegalMoves(square) {
     });
 }
 
+// Sound Effect
+const moveSound = new Audio('move.ogg');
+
 function onMoveMade(move) {
+    // Play sound
+    moveSound.currentTime = 0;
+    moveSound.play().catch(e => console.log('Audio play failed (user interaction needed first):', e));
+
     renderBoard();
     updateStatus();
 
     if (currentMode === 'practice') {
         checkPracticeMove(move);
+    }
+
+    if (currentMode === 'online') {
+        handleOnlineMove(move);
     }
 }
 
