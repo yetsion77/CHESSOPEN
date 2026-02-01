@@ -37,6 +37,7 @@
                 <div class="tabs">
                     <button class="tab-btn active" data-tab="record-mode">הקלטה</button>
                     <button class="tab-btn" data-tab="practice-mode">תרגול</button>
+                    <button class="tab-btn" data-tab="online-mode">משחק רשת</button>
                 </div>
 
                 <div id="record-mode" class="tab-content active">
@@ -76,6 +77,46 @@
                     <div id="practice-feedback" class="feedback-msg"></div>
                     <button id="show-hint-btn" class="btn secondary"
                         style="display:none; width: 100%; margin-top: 5px;">💡 הצג רמז</button>
+                </div>
+
+                <div id="online-mode" class="tab-content">
+                    <div id="online-setup">
+                        <input type="text" id="player-name" placeholder="השם שלך">
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button id="create-game-btn" class="btn primary">צור משחק חדש</button>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="text" id="game-code-input" placeholder="קוד משחק" style="margin-bottom:0;">
+                            <button id="join-game-btn" class="btn secondary">הצטרף</button>
+                        </div>
+                    </div>
+
+                    <div id="online-lobby"
+                        style="display:none; text-align: center; background: #333; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                        <h3>קוד משחק: <span id="display-game-code"
+                                style="color: var(--highlight); user-select: text; cursor: pointer;"></span></h3>
+                        <p style="font-size: 0.9em; color: #aaa;">שלח את הקוד לחבר כדי שיתחבר</p>
+                    </div>
+
+                    <div id="online-game-ui" style="display:none; margin-top: 15px;">
+                        <div class="scoreboard"
+                            style="display: flex; justify-content: space-between; background: #222; padding: 10px; border-radius: 4px; border: 1px solid #444;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 0.8em; color: #aaa;">לבן (אני)</div>
+                                <div id="white-player-name" style="font-weight: bold; font-size: 1.1em;">-</div>
+                                <div id="white-score" style="font-size: 2em; color: var(--success-color);">0</div>
+                            </div>
+                            <div style="display: flex; align-items: center; color: #666; font-size: 1.5em;">VS</div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 0.8em; color: #aaa;">שחור</div>
+                                <div id="black-player-name" style="font-weight: bold; font-size: 1.1em;">ממתין...</div>
+                                <div id="black-score" style="font-size: 2em; color: var(--success-color);">0</div>
+                            </div>
+                        </div>
+                        <div id="online-status-msg" style="margin-top: 10px; text-align: center; color: #ffeb3b;"></div>
+                        <button id="rematch-btn" class="btn primary"
+                            style="width: 100%; margin-top: 10px; display: none;">משחק נוסף</button>
+                    </div>
                 </div>
 
                 <div class="history-section">
