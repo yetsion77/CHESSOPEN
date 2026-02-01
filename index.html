@@ -38,6 +38,7 @@
                     <button class="tab-btn active" data-tab="record-mode">הקלטה</button>
                     <button class="tab-btn" data-tab="practice-mode">תרגול</button>
                     <button class="tab-btn" data-tab="online-mode">משחק רשת</button>
+                    <button class="tab-btn" data-tab="league-mode">ליגה 🏆</button>
                 </div>
 
                 <div id="record-mode" class="tab-content active">
@@ -120,8 +121,67 @@
                             </div>
                         </div>
                         <div id="online-status-msg" style="margin-top: 10px; text-align: center; color: #ffeb3b;"></div>
+
+                        <!-- Chat Box -->
+                        <div id="chat-container"
+                            style="margin-top: 15px; border: 1px solid #444; border-radius: 4px; background: #222;">
+                            <div id="chat-messages"
+                                style="height: 150px; overflow-y: auto; padding: 10px; font-size: 0.9em; display: flex; flex-direction: column; gap: 5px;">
+                            </div>
+                            <div style="display: flex; border-top: 1px solid #444;">
+                                <input type="text" id="chat-input" placeholder="כתוב הודעה..."
+                                    style="border: none; margin: 0; border-radius: 0 0 4px 0;">
+                                <button id="chat-send-btn" class="btn primary"
+                                    style="width: 60px; margin: 0; border-radius: 0 0 0 4px; font-size: 1.2em;">➤</button>
+                            </div>
+                        </div>
+
                         <button id="rematch-btn" class="btn primary"
                             style="width: 100%; margin-top: 10px; display: none;">משחק נוסף</button>
+                    </div>
+                </div>
+
+                <div id="league-mode" class="tab-content">
+                    <!-- League Setup -->
+                    <div id="league-setup">
+                        <h3>ליגה (3-5 שחקנים)</h3>
+                        <input type="text" id="league-player-name" placeholder="השם שלך">
+                        <button id="create-league-btn" class="btn primary">פתח ליגה חדשה</button>
+
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <input type="text" id="league-code-input" placeholder="קוד ליגה" style="margin-bottom:0;">
+                            <button id="join-league-btn" class="btn secondary">הצטרף</button>
+                        </div>
+                    </div>
+
+                    <!-- League Lobby -->
+                    <div id="league-lobby" style="display:none; text-align: center;">
+                        <h3>קוד ליגה: <span id="league-code-display"
+                                style="color: var(--highlight); user-select: text; cursor: pointer;"></span></h3>
+                        <p>שחקנים שהצטרפו:</p>
+                        <ul id="league-players-list"
+                            style="list-style: none; padding: 0; background: #333; border-radius: 4px;"></ul>
+                        <button id="start-league-btn" class="btn primary" style="display:none; margin-top: 10px;">התחל
+                            עונה! 🏆</button>
+                        <p id="league-wait-msg" style="color: #aaa; font-size: 0.9em;">ממתין למנהל שיתחיל...</p>
+                    </div>
+
+                    <!-- League Dashboard -->
+                    <div id="league-dashboard" style="display:none;">
+                        <h4>טבלת ניקוד 🏆</h4>
+                        <table class="history-table" id="league-standings" style="margin-bottom: 20px;">
+                            <thead>
+                                <tr>
+                                    <th>מקום</th>
+                                    <th>שם</th>
+                                    <th>נק'</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <h4>משחקים הבאים ⚔️</h4>
+                        <div id="league-matches-list"></div>
                     </div>
                 </div>
 

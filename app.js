@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -438,7 +438,291 @@ let playerSide = 'white'; // 'white' (creator) or 'black' (joiner)
 let myPlayerName = 'אורח';
 
 
+// --- League State ---
+let currentLeagueId = null;
+let leaguePlayerId = null; // Generated unique ID for this session/player in league
+let isLeagueHost = false;
+
+// --- League Logic ---
+
+function createLeague() {
+    const name = document.getElementById('league-player-name').value.trim();
+    if (!name) return alert('אנא הכנס שם');
+    myPlayerName = name;
+
+    // Generate League Code
+    const leagueId = Math.floor(1000 + Math.random() * 9000).toString(); // 4 digits
+    leaguePlayerId = 'player_' + Date.now();
+    isLeagueHost = true;
+
+    const initialData = {
+        status: 'lobby', // lobby, active, finished
+        players: {
+            [leaguePlayerId]: { name: name, points: 0, host: true }
+        },
+        matches: []
+    };
+
+    set(ref(db, 'leagues/' + leagueId), initialData)
+        .then(() => {
+            currentLeagueId = leagueId;
+            setupLeagueLobbyUI();
+            listenToLeague(leagueId);
+        });
+}
+
+function joinLeague() {
+    const name = document.getElementById('league-player-name').value.trim();
+    if (!name) return alert('אנא הכנס שם');
+    myPlayerName = name;
+
+    const code = document.getElementById('league-code-input').value.trim();
+    if (!code) return alert('אנא הכנס קוד ליגה');
+
+    const leagueRef = ref(db, 'leagues/' + code);
+
+    // Check existence
+    onValue(leagueRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return alert('ליגה לא נמצאה');
+
+        if (data.status !== 'lobby') return alert('הליגה כבר התחילה');
+
+        // Add myself
+        leaguePlayerId = 'player_' + Date.now();
+        set(ref(db, `leagues/${code}/players/${leaguePlayerId}`), {
+            name: name,
+            points: 0
+        });
+
+        currentLeagueId = code;
+        isLeagueHost = false;
+        setupLeagueLobbyUI();
+        listenToLeague(code);
+
+    }, { onlyOnce: true });
+}
+
+function startLeague() {
+    if (!currentLeagueId || !isLeagueHost) return;
+
+    // Generate Schedule (Round Robin)
+    // Get players keys
+    get(ref(db, `leagues/${currentLeagueId}/players`)).then(snapshot => {
+        const players = snapshot.val();
+        const pIds = Object.keys(players);
+
+        if (pIds.length < 3) return alert('צריך לפחות 3 שחקנים לליגה');
+
+        let matches = [];
+        // Round Robin Generator
+        for (let i = 0; i < pIds.length; i++) {
+            for (let j = i + 1; j < pIds.length; j++) {
+                const p1 = pIds[i];
+                const p2 = pIds[j];
+
+                matches.push({
+                    id: `m_${i}_${j}`,
+                    p1: p1,
+                    p2: p2,
+                    p1Name: players[p1].name,
+                    p2Name: players[p2].name,
+                    status: 'pending', // pending, playing, finished
+                    winner: null
+                });
+            }
+        }
+
+        set(ref(db, `leagues/${currentLeagueId}/matches`), matches);
+        set(ref(db, `leagues/${currentLeagueId}/status`), 'active');
+    });
+}
+
+function listenToLeague(leagueId) {
+    const leagueRef = ref(db, 'leagues/' + leagueId);
+
+    onValue(leagueRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+
+        // UI Routing based on status
+        if (data.status === 'lobby') {
+            updateLeagueLobbyList(data.players);
+        } else if (data.status === 'active') {
+            setupLeagueDashboardUI();
+            updateLeagueDashboard(data);
+        }
+    });
+}
+
+function updateLeagueLobbyList(players) {
+    const list = document.getElementById('league-players-list');
+    list.innerHTML = '';
+
+    Object.values(players).forEach(p => {
+        const li = document.createElement('li');
+        li.innerText = p.name + (p.host ? ' (מנהל)' : '');
+        list.appendChild(li);
+    });
+
+    if (isLeagueHost) {
+        document.getElementById('start-league-btn').style.display = 'block';
+        document.getElementById('league-wait-msg').style.display = 'none';
+    }
+}
+
+function updateLeagueDashboard(data) {
+    // 1. Standings
+    const players = Object.entries(data.players).map(([id, p]) => ({ id, ...p }));
+    // Sort by points desc
+    players.sort((a, b) => b.points - a.points);
+
+    const tbody = document.querySelector('#league-standings tbody');
+    tbody.innerHTML = '';
+
+    players.forEach((p, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${idx + 1}</td><td>${p.name}</td><td>${p.points}</td>`;
+        tbody.appendChild(tr);
+    });
+
+    // 2. Matches
+    const matchesDiv = document.getElementById('league-matches-list');
+    matchesDiv.innerHTML = '';
+
+    const matches = data.matches || [];
+
+    matches.forEach(m => {
+        const isMyMatch = (m.p1 === leaguePlayerId || m.p2 === leaguePlayerId);
+
+        const card = document.createElement('div');
+        card.className = `league-match-card ${m.status === 'finished' ? 'completed' : ''}`;
+
+        let actionBtn = '';
+
+        if (m.status === 'pending') {
+            if (isMyMatch) {
+                actionBtn = `<button class="btn primary play-match-btn" onclick="playLeagueMatch('${m.id}')">שחק! 🎮</button>`;
+            } else {
+                actionBtn = `<span style="font-size:0.8em; color:#aaa;">ממתין...</span>`;
+            }
+        } else if (m.status === 'playing') {
+            if (isMyMatch) {
+                actionBtn = `<button class="btn primary play-match-btn" onclick="playLeagueMatch('${m.id}')">חזור למשחק</button>`;
+            } else {
+                actionBtn = `<span style="color: yellow; font-size:0.8em;">משוחק כעת...</span>`;
+            }
+        } else {
+            actionBtn = `<span class="match-result">${m.winner === 'draw' ? 'תיקו' : 'הסתיים'}</span>`;
+        }
+
+        card.innerHTML = `
+            <div class="league-match-info">
+                <span class="match-vs">${m.p1Name} vs ${m.p2Name}</span>
+            </div>
+            <div>${actionBtn}</div>
+        `;
+
+        matchesDiv.appendChild(card);
+    });
+}
+
+function playLeagueMatch(matchId) {
+    // Redirect to Online Game Mode with this specialized ID
+    // We construct a specific GameID: "LEAGUE_{LeagueID}_{MatchID}"
+    const gameId = `L_${currentLeagueId}_${matchId}`;
+
+    // Logic to switch tab and join
+    // We need to know which side I am
+    // Get match data first? Or just try to join as P1 or P2?
+    // We can lookup in local cache usually, but here:
+
+    // Simple approach: Set GameID and call join/create logic adapted.
+    // Better: create a specialized init function.
+
+    startLeagueGame(gameId, matchId);
+}
+
+function startLeagueGame(gameId, matchId) {
+    // 1. Switch to Online Tab
+    document.querySelector('[data-tab="online-mode"]').click();
+
+    // 2. Setup standard online game but with League Callback hooks
+    // Check if game exists in games/ node. If not, create it.
+
+    const gameRef = ref(db, 'games/' + gameId);
+
+    // Determine my role in this match (White or Black)
+    // We need to fetch the match details from the matches array
+    get(ref(db, `leagues/${currentLeagueId}/matches`)).then(snap => {
+        const matches = snap.val();
+        const match = matches.find(m => m.id === matchId);
+
+        if (!match) return;
+
+        const amIWhite = (match.p1 === leaguePlayerId); // P1 is White by default here
+        const mySide = amIWhite ? 'white' : 'black';
+
+        // Initial Game Setup if needed
+        get(gameRef).then(gSnap => {
+            if (!gSnap.exists()) {
+                // Create logic
+                const initialGameData = {
+                    fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+                    pgn: '',
+                    white: { name: match.p1Name, wins: 0, time: 600 },
+                    black: { name: match.p2Name, wins: 0, time: 600 },
+                    turn: 'w',
+                    status: 'playing', // Start immediately
+                    leagueMatchId: matchId, // Tag it
+                    lastMoveTime: Date.now()
+                };
+                set(gameRef, initialGameData);
+            }
+        });
+
+        // Update League Match Status to 'playing'
+        if (match.status === 'pending') {
+            // Find index of match to update status
+            const idx = matches.findIndex(m => m.id === matchId);
+            set(ref(db, `leagues/${currentLeagueId}/matches/${idx}/status`), 'playing');
+        }
+
+        // Join
+        onlineGameId = gameId;
+        playerSide = mySide;
+        myPlayerName = amIWhite ? match.p1Name : match.p2Name;
+
+        setupOnlineGameUI();
+        listenToGame(gameId);
+        listenToChat(gameId);
+    });
+}
+
+function setupLeagueLobbyUI() {
+    document.getElementById('league-setup').style.display = 'none';
+    document.getElementById('league-lobby').style.display = 'block';
+    document.getElementById('league-code-display').innerText = currentLeagueId;
+}
+
+function setupLeagueDashboardUI() {
+    document.getElementById('league-lobby').style.display = 'none';
+    document.getElementById('league-dashboard').style.display = 'block';
+}
+
+// --- Modify handleOnlineMove to report League Results ---
+// We need to inject this into the existing handleOnlineMove or wrapper
+// See below for injection
+
+
+
 // --- Online Logic ---
+
+// Timer State
+let whiteTime = 600;
+let blackTime = 600;
+let lastMoveTime = Date.now();
+let timerInterval = null;
 
 function createGame() {
     const name = document.getElementById('player-name').value.trim() || 'שחקן 1';
@@ -447,14 +731,16 @@ function createGame() {
     // Generate simple 6-digit ID
     const gameId = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // 10 minutes (600 seconds)
     const initialGameData = {
         fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         pgn: '',
-        white: { name: name, wins: 0 },
-        black: { name: 'ממתין...', wins: 0 },
+        white: { name: name, wins: 0, time: 600 },
+        black: { name: 'ממתין...', wins: 0, time: 600 },
         turn: 'w',
-        status: 'waiting', // waiting, playing, finished
-        lastMove: null
+        status: 'waiting',
+        lastMove: null,
+        lastMoveTime: Date.now()
     };
 
     set(ref(db, 'games/' + gameId), initialGameData)
@@ -462,9 +748,9 @@ function createGame() {
             onlineGameId = gameId;
             playerSide = 'white';
 
-            // Switch to game view
             setupOnlineGameUI();
             listenToGame(gameId);
+            listenToChat(gameId);
         });
 }
 
@@ -475,22 +761,19 @@ function joinGame() {
     const code = document.getElementById('game-code-input').value.trim();
     if (!code) return alert('אנא הכנס קוד משחק');
 
-    // Check if game exists
     const gameRef = ref(db, 'games/' + code);
 
-    // Read once
     onValue(gameRef, (snapshot) => {
         const data = snapshot.val();
-        if (!data) {
-            alert('המשחק לא נמצא');
-            return;
-        }
+        if (!data) return alert('המשחק לא נמצא');
 
-        // Update Black player
-        // Note: we only want to do this ONCE.
         if (data.status === 'waiting') {
-            set(ref(db, `games/${code}/black`), { name: name, wins: 0 });
+            set(ref(db, `games/${code}/black/name`), name);
+            set(ref(db, `games/${code}/black/wins`), 0);
+            set(ref(db, `games/${code}/black/time`), 600);
+
             set(ref(db, `games/${code}/status`), 'playing');
+            set(ref(db, `games/${code}/lastMoveTime`), Date.now());
         }
 
         onlineGameId = code;
@@ -498,6 +781,7 @@ function joinGame() {
 
         setupOnlineGameUI();
         listenToGame(code);
+        listenToChat(code);
 
     }, { onlyOnce: true });
 }
@@ -513,17 +797,31 @@ function listenToGame(gameId) {
         if (data.fen !== game.fen()) {
             game.load(data.fen);
             renderBoard();
-            updateStatus(); // Updates history text
+            updateStatus();
+        }
+
+        // Sync Times
+        whiteTime = data.white?.time || 600;
+        blackTime = data.black?.time || 600;
+        lastMoveTime = data.lastMoveTime || Date.now();
+
+        if (data.status === 'playing') {
+            startTimerInterval(data.turn);
+        } else {
+            stopTimerInterval();
         }
 
         // Update UI info
-        document.getElementById('white-player-name').innerText = data.white.name;
-        document.getElementById('white-score').innerText = data.white.wins;
+        if (data.white) {
+            document.getElementById('white-player-name').innerText = data.white.name;
+            document.getElementById('white-score').innerText = data.white.wins;
+        }
+        if (data.black) {
+            document.getElementById('black-player-name').innerText = data.black.name;
+            document.getElementById('black-score').innerText = data.black.wins;
+        }
 
-        document.getElementById('black-player-name').innerText = data.black.name;
-        document.getElementById('black-score').innerText = data.black.wins;
-
-        // Update Status Msg
+        // Status Msg
         const statusMsg = document.getElementById('online-status-msg');
         if (data.status === 'waiting') {
             statusMsg.innerText = 'ממתין ליריב...';
@@ -534,36 +832,151 @@ function listenToGame(gameId) {
         } else if (data.status === 'finished') {
             statusMsg.innerText = 'המשחק נגמר!';
             document.getElementById('rematch-btn').style.display = 'block';
+            stopTimerInterval();
         }
     });
+}
+
+function startTimerInterval(turn) {
+    stopTimerInterval();
+    timerInterval = setInterval(() => {
+        if (turn === 'w') {
+            if (whiteTime > 0) whiteTime--;
+        } else {
+            if (blackTime > 0) blackTime--;
+        }
+
+        updateTimerUI();
+
+        // Check Timeout
+        if ((playerSide === 'white' && turn === 'w' && whiteTime <= 0) ||
+            (playerSide === 'black' && turn === 'b' && blackTime <= 0)) {
+
+            // Timeout Logic
+            set(ref(db, `games/${onlineGameId}/status`), 'finished');
+
+            const winner = playerSide === 'white' ? 'black' : 'white';
+
+            // League Result
+            checkLeagueResult(winner);
+
+            const currentWins = parseInt(document.getElementById(`${winner}-score`).innerText) || 0;
+            set(ref(db, `games/${onlineGameId}/${winner}/wins`), currentWins + 1);
+            stopTimerInterval();
+        }
+
+    }, 1000);
+    updateTimerUI();
+}
+
+function stopTimerInterval() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    updateTimerUI();
+}
+
+function updateTimerUI() {
+    const fmt = (t) => {
+        const m = Math.floor(t / 60);
+        const s = t % 60;
+        return `${m}:${s < 10 ? '0' + s : s}`;
+    };
+
+    const wEl = document.getElementById('white-timer');
+    const bEl = document.getElementById('black-timer');
+
+    if (wEl) {
+        wEl.innerText = fmt(whiteTime);
+        wEl.style.color = whiteTime < 30 ? '#ff5252' : '#fff';
+    }
+    if (bEl) {
+        bEl.innerText = fmt(blackTime);
+        bEl.style.color = blackTime < 30 ? '#ff5252' : '#fff';
+    }
 }
 
 function handleOnlineMove(move) {
     if (!onlineGameId) return;
 
-    // Update Firebase
-    const newFen = game.fen();
-    const newPgn = game.pgn();
+    const turn = game.turn(); // This is the NEXT turn
+    const mover = turn === 'w' ? 'black' : 'white'; // Previous turn
 
-    set(ref(db, `games/${onlineGameId}/fen`), newFen);
-    set(ref(db, `games/${onlineGameId}/pgn`), newPgn);
-    set(ref(db, `games/${onlineGameId}/turn`), game.turn());
+    set(ref(db, `games/${onlineGameId}/fen`), game.fen());
+    set(ref(db, `games/${onlineGameId}/pgn`), game.pgn());
+    set(ref(db, `games/${onlineGameId}/turn`), turn);
     set(ref(db, `games/${onlineGameId}/lastMove`), move);
+    set(ref(db, `games/${onlineGameId}/lastMoveTime`), Date.now());
 
-    // Check Game Over
+    // Sync time to DB
+    if (mover === 'white') set(ref(db, `games/${onlineGameId}/white/time`), whiteTime);
+    else set(ref(db, `games/${onlineGameId}/black/time`), blackTime);
+
+
     if (game.game_over()) {
         set(ref(db, `games/${onlineGameId}/status`), 'finished');
 
-        // Update score if checkmate
         if (game.in_checkmate()) {
             const winner = game.turn() === 'b' ? 'white' : 'black';
+            checkLeagueResult(winner);
 
             if (playerSide === winner) {
                 const currentWins = parseInt(document.getElementById(`${winner}-score`).innerText) || 0;
                 set(ref(db, `games/${onlineGameId}/${winner}/wins`), currentWins + 1);
             }
+        } else if (game.in_draw()) {
+            checkLeagueResult('draw');
         }
     }
+}
+
+function checkLeagueResult(winnerColor) {
+    if (!currentLeagueId || !onlineGameId) return;
+
+    get(ref(db, `games/${onlineGameId}/leagueMatchId`)).then(snap => {
+        const matchId = snap.val();
+        if (!matchId) return;
+
+        get(ref(db, `leagues/${currentLeagueId}/matches`)).then(mSnap => {
+            const matches = mSnap.val();
+            const idx = matches.findIndex(m => m.id === matchId);
+            if (idx === -1) return;
+            if (matches[idx].status === 'finished') return;
+
+            let p1Points = 0;
+            let p2Points = 0;
+            let winnerId = null;
+
+            if (winnerColor === 'draw') {
+                p1Points = 1;
+                p2Points = 1;
+                winnerId = 'draw';
+            } else {
+                if (winnerColor === 'white') {
+                    p1Points = 3;
+                    winnerId = matches[idx].p1;
+                } else {
+                    p2Points = 3;
+                    winnerId = matches[idx].p2;
+                }
+            }
+
+            set(ref(db, `leagues/${currentLeagueId}/matches/${idx}/status`), 'finished');
+            set(ref(db, `leagues/${currentLeagueId}/matches/${idx}/winner`), winnerId);
+
+            get(ref(db, `leagues/${currentLeagueId}/players`)).then(pSnap => {
+                const players = pSnap.val();
+                if (!players) return;
+
+                const p1 = players[matches[idx].p1];
+                const p2 = players[matches[idx].p2];
+
+                if (p1) set(ref(db, `leagues/${currentLeagueId}/players/${matches[idx].p1}/points`), (p1.points || 0) + p1Points);
+                if (p2) set(ref(db, `leagues/${currentLeagueId}/players/${matches[idx].p2}/points`), (p2.points || 0) + p2Points);
+            });
+        });
+    });
 }
 
 function setupOnlineGameUI() {
@@ -573,33 +986,86 @@ function setupOnlineGameUI() {
 
     document.getElementById('display-game-code').innerText = onlineGameId;
 
-    // Reset Board for new game
     if (playerSide === 'white') {
         game.reset();
         renderBoard();
         updateStatus();
     }
 
-    // Update Labels
     document.querySelector('#online-game-ui #white-player-name').innerText = (playerSide === 'white' ? myPlayerName : 'יריב');
 }
 
-
 function startRematch() {
     if (!onlineGameId) return;
-    // Reset logic
     game.reset();
     set(ref(db, `games/${onlineGameId}/fen`), game.fen());
     set(ref(db, `games/${onlineGameId}/pgn`), '');
     set(ref(db, `games/${onlineGameId}/status`), 'playing');
 
-    // Reset Times
     set(ref(db, `games/${onlineGameId}/white/time`), 600);
     set(ref(db, `games/${onlineGameId}/black/time`), 600);
     set(ref(db, `games/${onlineGameId}/lastMoveTime`), Date.now());
 
     document.getElementById('rematch-btn').style.display = 'none';
 }
+
+
+// --- Chat Logic ---
+
+function sendChat() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text || !onlineGameId) return;
+
+    // Push message
+    const msgData = {
+        sender: myPlayerName,
+        text: text,
+        timestamp: Date.now()
+    };
+
+    // We use push() to generate a unique ID
+    // We can't import push easily without changing imports? 
+    // Actually we can use set with unique timestamp ID or simple list
+    // Simple custom ID:
+    const msgId = Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+    set(ref(db, `games/${onlineGameId}/chat/${msgId}`), msgData);
+
+    input.value = '';
+}
+
+function listenToChat(gameId) {
+    const chatRef = ref(db, `games/${gameId}/chat`);
+    const chatBox = document.getElementById('chat-messages');
+    chatBox.innerHTML = ''; // Clear prev
+
+    onValue(chatRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data) return;
+
+        chatBox.innerHTML = '';
+
+        // Convert to array and sort
+        const msgs = Object.values(data).sort((a, b) => a.timestamp - b.timestamp);
+
+        msgs.forEach(msg => {
+            const div = document.createElement('div');
+            const isMe = msg.sender === myPlayerName;
+
+            div.className = `chat-msg ${isMe ? 'mine' : 'opponent'}`;
+            div.innerHTML = `
+                <div class="chat-sender">${isMe ? 'אני' : msg.sender}</div>
+                <div>${msg.text}</div>
+            `;
+            chatBox.appendChild(div);
+        });
+
+        // Auto scroll
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+}
+
 
 
 // --- Event Listeners ---
@@ -659,6 +1125,19 @@ function setupEventListeners() {
             const piece = e.target.getAttribute('data-piece');
             handlePromotionChoice(piece);
         });
+    });
+
+    // League Buttons
+    document.getElementById('create-league-btn').addEventListener('click', createLeague);
+    document.getElementById('join-league-btn').addEventListener('click', joinLeague);
+    document.getElementById('start-league-btn').addEventListener('click', startLeague);
+    // Expose for HTML onclick
+    window.playLeagueMatch = playLeagueMatch;
+
+    // Chat Listeners
+    document.getElementById('chat-send-btn').addEventListener('click', sendChat);
+    document.getElementById('chat-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendChat();
     });
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
