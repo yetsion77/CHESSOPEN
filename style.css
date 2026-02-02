@@ -386,76 +386,15 @@ select {
     color: var(--highlight);
 }
 
-@media (max-width: 800px) {
-    .app-container {
-        width: 100%;
-    }
-
-    .main-content {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .controls-panel {
-        width: 90%;
-    }
-}
-
-/* Append League Styles */
-#league-matches-list {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.league-match-card {
-    background: #333;
-    padding: 10px;
-    margin-bottom: 8px;
-    border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: 1px solid #444;
-}
-
-.league-match-card.completed {
-    opacity: 0.6;
-    border-color: #555;
-    background: #2a2a2a;
-}
-
-.league-match-info {
-    font-size: 0.9em;
-}
-
-.match-vs {
-    font-weight: bold;
-    color: #fff;
-}
-
-.match-result {
-    font-weight: bold;
-    color: var(--highlight);
-    margin-right: 5px;
-}
-
-.play-match-btn {
-    padding: 5px 15px;
-    font-size: 0.9em;
-}
-
-#league-players-list li {
-    padding: 8px;
-    border-bottom: 1px solid #444;
-    color: #ddd;
-}
-
+/* ... Existing Styles ... */
 /* Chat Styles */
 .chat-msg {
-    padding: 5px 8px;
-    border-radius: 4px;
+    padding: 8px 12px;
+    border-radius: 12px;
     background: #333;
     max-width: 80%;
+    margin-bottom: 5px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .chat-msg.mine {
@@ -464,17 +403,55 @@ select {
     background: #2e7d32;
     /* Greenish */
     color: white;
+    border-bottom-right-radius: 2px;
 }
 
 .chat-msg.opponent {
     align-self: flex-end;
     /* RTL: Opponent on left */
-    background: #444;
-    color: #ccc;
+    background: #424242;
+    color: #e0e0e0;
+    border-bottom-left-radius: 2px;
 }
 
 .chat-sender {
     font-size: 0.75em;
-    color: #aaa;
+    color: rgba(255, 255, 255, 0.7);
     margin-bottom: 2px;
+}
+
+#chat-input {
+    border-radius: 0 0 4px 0;
+    /* Keep specific corner */
+    background: #2a2a2a;
+    border-top: 1px solid #444;
+}
+
+@media (max-width: 800px) {
+    .app-container {
+        width: 100%;
+        padding: 10px 0;
+    }
+
+    .main-content {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .board-container {
+        width: 95vw;
+        height: 95vw;
+        max-width: 95vw;
+        max-height: 95vw;
+    }
+
+    .controls-panel {
+        width: 95%;
+        padding: 15px;
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
 }

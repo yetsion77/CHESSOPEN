@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove, get, update } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -71,9 +71,25 @@ function renderBoard() {
     boardEl.innerHTML = '';
     const boardState = game.board();
 
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
+    const isBlackPerspective = (playerSide === 'black');
+
+    // If black perspective: iterate r from 7 to 0, c from 7 to 0
+    // If white perspective: iterate r from 0 to 7, c from 0 to 7
+
+    const startR = isBlackPerspective ? 7 : 0;
+    const endR = isBlackPerspective ? -1 : 8;
+    const stepR = isBlackPerspective ? -1 : 1;
+
+    const startC = isBlackPerspective ? 7 : 0;
+    const endC = isBlackPerspective ? -1 : 8;
+    const stepC = isBlackPerspective ? -1 : 1;
+
+    for (let r = startR; r !== endR; r += stepR) {
+        for (let c = startC; c !== endC; c += stepC) {
             const squareEl = document.createElement('div');
+            // isWhite square calculation depends on coords. 
+            // (0,0) is a8 (white). (0,1) is b8 (black).
+            // (r+c)%2===0 is generally white.
             const isWhite = (r + c) % 2 === 0;
             const squareName = String.fromCharCode(97 + c) + (8 - r);
 
@@ -87,6 +103,10 @@ function renderBoard() {
                 pieceImg.classList.add('piece');
                 const pKey = piece.color + piece.type.toUpperCase();
                 pieceImg.style.backgroundImage = `url(${pieces[pKey]})`;
+                // Flip piece image if board is flipped? Usually pieces stay upright.
+                // CSS background-image doesn't rotate by itself. 
+                // However, if we rotated the BOARD div, we would need to unrotate pieces.
+                // Here we are re-rendering the grid in different order, so pieces are upright.
                 squareEl.appendChild(pieceImg);
             }
 
@@ -732,11 +752,15 @@ function createGame() {
     const gameId = Math.floor(100000 + Math.random() * 900000).toString();
 
     // 10 minutes (600 seconds)
+    // Randomize starting side
+    const isCreatorWhite = Math.random() < 0.5;
+    playerSide = isCreatorWhite ? 'white' : 'black';
+
     const initialGameData = {
         fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         pgn: '',
-        white: { name: name, wins: 0, time: 600 },
-        black: { name: 'ממתין...', wins: 0, time: 600 },
+        white: { name: isCreatorWhite ? name : 'ממתין...', wins: 0, time: 600 },
+        black: { name: isCreatorWhite ? 'ממתין...' : name, wins: 0, time: 600 },
         turn: 'w',
         status: 'waiting',
         lastMove: null,
@@ -746,7 +770,7 @@ function createGame() {
     set(ref(db, 'games/' + gameId), initialGameData)
         .then(() => {
             onlineGameId = gameId;
-            playerSide = 'white';
+            // playerSide is already set above
 
             setupOnlineGameUI();
             listenToGame(gameId);
@@ -903,24 +927,30 @@ function handleOnlineMove(move) {
     const turn = game.turn(); // This is the NEXT turn
     const mover = turn === 'w' ? 'black' : 'white'; // Previous turn
 
-    set(ref(db, `games/${onlineGameId}/fen`), game.fen());
-    set(ref(db, `games/${onlineGameId}/pgn`), game.pgn());
-    set(ref(db, `games/${onlineGameId}/turn`), turn);
-    set(ref(db, `games/${onlineGameId}/lastMove`), move);
-    set(ref(db, `games/${onlineGameId}/lastMoveTime`), Date.now());
+    const updates = {};
+    updates[`games/${onlineGameId}/fen`] = game.fen();
+    updates[`games/${onlineGameId}/pgn`] = game.pgn();
+    updates[`games/${onlineGameId}/turn`] = turn;
+    updates[`games/${onlineGameId}/lastMove`] = move;
+    updates[`games/${onlineGameId}/lastMoveTime`] = Date.now();
 
-    // Sync time to DB
-    if (mover === 'white') set(ref(db, `games/${onlineGameId}/white/time`), whiteTime);
-    else set(ref(db, `games/${onlineGameId}/black/time`), blackTime);
-
+    // Sync time to DB atomically with the move
+    if (mover === 'white') updates[`games/${onlineGameId}/white/time`] = whiteTime;
+    else updates[`games/${onlineGameId}/black/time`] = blackTime;
 
     if (game.game_over()) {
-        set(ref(db, `games/${onlineGameId}/status`), 'finished');
+        updates[`games/${onlineGameId}/status`] = 'finished';
 
         if (game.in_checkmate()) {
             const winner = game.turn() === 'b' ? 'white' : 'black';
             checkLeagueResult(winner);
 
+            // We can't verify 'wins' score locally safely for atomic update without transaction, 
+            // but for simplicity we'll just set it separate or assume it updates via listener later.
+            // Or better: don't include it in this atomic update if it requires reading current value.
+            // The existing listener logic handles end game UI.
+            // Let's keep the win increment logic separate or use transaction if needed.
+            // For now, keeping original logic for wins outside the big update or triggering it separately.
             if (playerSide === winner) {
                 const currentWins = parseInt(document.getElementById(`${winner}-score`).innerText) || 0;
                 set(ref(db, `games/${onlineGameId}/${winner}/wins`), currentWins + 1);
@@ -929,6 +959,8 @@ function handleOnlineMove(move) {
             checkLeagueResult('draw');
         }
     }
+
+    update(ref(db), updates);
 }
 
 function checkLeagueResult(winnerColor) {
@@ -1151,6 +1183,8 @@ function setupEventListeners() {
 
             if (tabId === 'record-mode') {
                 currentMode = 'record';
+                playerSide = 'white'; // Reset view to default
+                renderBoard(); // Re-render needed if it was flipped
                 updatePracticeFeedback("", 'neutral');
             } else if (tabId === 'online-mode') {
                 currentMode = 'online';
@@ -1162,6 +1196,8 @@ function setupEventListeners() {
             } else {
                 stopPlayback();
                 currentMode = 'practice';
+                playerSide = 'white'; // Reset view
+                renderBoard();
             }
         });
     });
