@@ -1043,11 +1043,13 @@ function setupOnlineGameUI() {
 
     document.getElementById('display-game-code').innerText = onlineGameId;
 
+
     if (playerSide === 'white') {
         game.reset();
-        renderBoard();
-        updateStatus();
     }
+    // Always render to ensure correct orientation
+    renderBoard();
+    updateStatus();
 
     document.querySelector('#online-game-ui #white-player-name').innerText = (playerSide === 'white' ? myPlayerName : 'יריב');
 }
@@ -1064,6 +1066,14 @@ function startRematch() {
     set(ref(db, `games/${onlineGameId}/lastMoveTime`), Date.now());
 
     document.getElementById('rematch-btn').style.display = 'none';
+}
+
+function toggleOrientation() {
+    // Toggle playerSide between 'white' and 'black' for visual purposes
+    // Only in local modes usually, but could allow in online too if user wants to peek?
+    // Let's allow it in Record mode as requested.
+    playerSide = (playerSide === 'white') ? 'black' : 'white';
+    renderBoard();
 }
 
 
@@ -1328,6 +1338,9 @@ function updateAuthUI(user) {
 // Make sure to bind these new buttons!
 document.getElementById('login-btn').addEventListener('click', login);
 document.getElementById('logout-btn').addEventListener('click', logout);
+
+// Manual Flip
+document.getElementById('flip-btn').addEventListener('click', toggleOrientation);
 
 
 init();
