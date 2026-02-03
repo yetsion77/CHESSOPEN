@@ -356,6 +356,15 @@ function stepForward() {
     playbackIndex++;
 }
 
+function stepBackward() {
+    if (playbackIndex <= 0) return;
+
+    game.undo();
+    renderBoard();
+    updateStatus();
+    playbackIndex--;
+}
+
 function startPlayback() {
     stopPlayback();
     if (playbackIndex >= currentSequenceMoves.length) {
@@ -1166,6 +1175,7 @@ function setupEventListeners() {
     document.getElementById('play-btn').addEventListener('click', startPlayback);
     document.getElementById('pause-btn').addEventListener('click', stopPlayback);
     document.getElementById('next-move-btn').addEventListener('click', stepForward);
+    document.getElementById('prev-move-btn').addEventListener('click', stepBackward);
 
     document.getElementById('show-hint-btn').addEventListener('click', showHint);
 
