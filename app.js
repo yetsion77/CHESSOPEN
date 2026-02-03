@@ -28,7 +28,7 @@ if (typeof window.Chess === 'undefined') {
 let game = new window.Chess();
 let boardEl = document.getElementById('board');
 let statusEl = document.getElementById('game-status');
-let turnEl = document.getElementById('turn-indicator');
+// let turnEl = document.getElementById('turn-indicator'); // Removed
 let selectedSquare = null;
 
 // Playback State
@@ -242,9 +242,7 @@ function updateStatus() {
     }
 
     statusEl.innerText = status;
-    turnEl.innerText = moveColor;
-    statusEl.innerText = status;
-    turnEl.innerText = moveColor;
+    // turnEl.innerText = moveColor; // Removed
     renderMoveHistory();
 }
 
