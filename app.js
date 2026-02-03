@@ -1242,6 +1242,10 @@ function setupOnlineGameUI() {
     if (bar) bar.style.display = 'flex';
 
     document.querySelector('#online-game-ui #white-player-name').innerText = (playerSide === 'white' ? myPlayerName : 'יריב');
+
+    // Default UI state
+    document.getElementById('resign-btn').style.display = 'block';
+    document.getElementById('rematch-btn').style.display = 'none';
 }
 
 function startRematch() {
