@@ -103,6 +103,10 @@ header h1 {
     /* Let clicks pass to square */
 }
 
+.last-move {
+    background-color: rgba(155, 199, 0, 0.41) !important;
+}
+
 .move-hint {
     background-color: var(--hint-color);
     border-radius: 50%;

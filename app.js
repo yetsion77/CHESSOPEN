@@ -72,6 +72,10 @@ function renderBoard() {
     boardEl.innerHTML = '';
     const boardState = game.board();
 
+    // Get last move for highlighting
+    const history = game.history({ verbose: true });
+    const lastMove = history.length > 0 ? history[history.length - 1] : null;
+
     const isBlackPerspective = (playerSide === 'black');
 
     // If black perspective: iterate r from 7 to 0, c from 7 to 0
@@ -112,6 +116,11 @@ function renderBoard() {
             }
 
             if (selectedSquare === squareName) squareEl.classList.add('highlight');
+
+            // Highlight last move
+            if (lastMove && (squareName === lastMove.from || squareName === lastMove.to)) {
+                squareEl.classList.add('last-move');
+            }
 
             squareEl.addEventListener('click', () => handleSquareClick(squareName));
             boardEl.appendChild(squareEl);
