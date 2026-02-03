@@ -496,8 +496,47 @@ select {
     }
 
     .game-bar {
-        padding: 5px;
+        padding: 8px;
         margin-top: 5px;
+        background: #222;
+        /* Darker than panel */
+        border: 1px solid #444;
+    }
+
+    .player-info-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 4px 0;
+        border-bottom: 1px solid #333;
+    }
+
+    .player-info-row:last-child {
+        border-bottom: none;
+    }
+
+    .player-meta {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.9em;
+        max-width: 40%;
+    }
+
+    .player-name {
+        font-weight: bold;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #fff;
+    }
+
+    .captured-pieces {
+        display: flex;
+        flex-wrap: wrap;
+        font-size: 0.85em;
+        justify-content: flex-end;
     }
 
     .controls-panel {

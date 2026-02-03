@@ -898,10 +898,18 @@ function listenToGame(gameId) {
         if (data.white) {
             document.getElementById('white-player-name').innerText = data.white.name;
             document.getElementById('white-score').innerText = data.white.wins;
+
+            // Update Game Bar
+            const barWhite = document.getElementById('bar-name-white');
+            if (barWhite) barWhite.innerText = data.white.name;
         }
         if (data.black) {
             document.getElementById('black-player-name').innerText = data.black.name;
             document.getElementById('black-score').innerText = data.black.wins;
+
+            // Update Game Bar
+            const barBlack = document.getElementById('bar-name-black');
+            if (barBlack) barBlack.innerText = data.black.name;
         }
 
         // Status Msg
@@ -914,7 +922,14 @@ function listenToGame(gameId) {
             statusMsg.innerText = isMyTurn ? 'תורך!' : 'תור היריב';
         } else if (data.status === 'finished') {
             statusMsg.innerText = 'המשחק נגמר!';
+
+            if (data.resignedBy) {
+                const loserName = data.resignedBy === 'white' ? data.white.name : data.black.name;
+                statusMsg.innerText = `המשחק נגמר! (${loserName} נכנע)`;
+            }
+
             document.getElementById('rematch-btn').style.display = 'block';
+            document.getElementById('resign-btn').style.display = 'none';
             stopTimerInterval();
         }
     });
@@ -1083,6 +1098,54 @@ function handleOnlineMove(move) {
             checkLeagueResult('draw');
         }
     }
+
+    update(ref(db), updates);
+}
+
+function resignGame() {
+    if (!onlineGameId || !playerSide) return;
+
+    if (!confirm('האם אתה בטוח שאתה רוצה להיכנע?')) return;
+
+    // Resign updates status to finished and implies loss
+    const updates = {};
+    updates[`games/${onlineGameId}/status`] = 'finished';
+
+    // Determine winner (opponent)
+    const winner = playerSide === 'white' ? 'black' : 'white';
+
+    // Trigger win logic manually here or let listener handle it?
+    // Listener handles checkLeagueResult if status finished. 
+    // BUT listener usually checks checkmate/draw. 
+    // We need to explicitly handle resignation result in listener or here.
+    // Let's do it here to ensure it writes once.
+
+    checkLeagueResult(winner);
+
+    // Update local score visual immediately? No, listener will catch it 
+    // if we update DB wins. But we decided wins update is tricky atomically.
+    // Let's just update status and let UI show "Game Over".
+    // We can add a "resigned" flag if we want.
+    updates[`games/${onlineGameId}/resignedBy`] = playerSide;
+
+    update(ref(db), updates);
+}
+
+function resignGame() {
+    if (!onlineGameId || !playerSide) return;
+
+    if (!confirm('האם אתה בטוח שאתה רוצה להיכנע?')) return;
+
+    // Resign updates status to finished and implies loss
+    const updates = {};
+    updates[`games/${onlineGameId}/status`] = 'finished';
+
+    // Determine winner (opponent)
+    const winner = playerSide === 'white' ? 'black' : 'white';
+
+    checkLeagueResult(winner);
+
+    updates[`games/${onlineGameId}/resignedBy`] = playerSide;
 
     update(ref(db), updates);
 }
@@ -1282,6 +1345,9 @@ function setupEventListeners() {
 
     const rematchBtn = document.getElementById('rematch-btn');
     if (rematchBtn) rematchBtn.addEventListener('click', startRematch);
+
+    const resignBtn = document.getElementById('resign-btn');
+    if (resignBtn) resignBtn.addEventListener('click', resignGame);
 
     // Display Code Copy
     const codeDisplay = document.getElementById('display-game-code');

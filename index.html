@@ -27,14 +27,26 @@
                 <!-- Board will be generated here -->
                 <div id="board" class="board"></div>
                 <!-- Game Bar: Timers & Material -->
-                <div id="game-bar" class="game-bar" style="display:none;">
-                    <div id="material-advantage" class="material-advantage">
-                        <!-- Captured pieces will go here -->
+                <div id="game-bar" class="game-bar" style="display:none; flex-direction: column; gap: 5px;">
+                    <!-- White Player -->
+                    <div class="player-info-row">
+                        <div class="player-meta">
+                            <span class="player-label" style="color:#aaa;">לבן:</span>
+                            <span id="bar-name-white" class="player-name">-</span>
+                        </div>
+                        <div style="flex:1;"></div>
                         <div id="white-captured" class="captured-pieces"></div>
-                        <div id="black-captured" class="captured-pieces"></div>
-                    </div>
-                    <div id="timers-display" class="timers-display">
                         <div id="timer-white" class="timer-box is-white">10:00</div>
+                    </div>
+
+                    <!-- Black Player -->
+                    <div class="player-info-row">
+                        <div class="player-meta">
+                            <span class="player-label" style="color:#aaa;">שחור:</span>
+                            <span id="bar-name-black" class="player-name">-</span>
+                        </div>
+                        <div style="flex:1;"></div>
+                        <div id="black-captured" class="captured-pieces"></div>
                         <div id="timer-black" class="timer-box is-black">10:00</div>
                     </div>
                 </div>
@@ -153,6 +165,10 @@
                             </div>
                         </div>
                         <div id="online-status-msg" style="margin-top: 10px; text-align: center; color: #ffeb3b;"></div>
+
+                        <button id="resign-btn" class="btn secondary"
+                            style="background: #a00; color: #fff; width: 100%; margin-top: 5px; display: none;">🏳
+                            להיכנע</button>
 
                         <!-- Chat Box -->
                         <div id="chat-container"
