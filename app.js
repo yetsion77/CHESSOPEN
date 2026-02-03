@@ -123,8 +123,12 @@ function renderBoard(lastMoveOverride = null) {
             if (selectedSquare === squareName) squareEl.classList.add('highlight');
 
             // Highlight last move
-            if (lastMove && (squareName === lastMove.from || squareName === lastMove.to)) {
-                squareEl.classList.add('last-move');
+            if (lastMove) {
+                if (squareName === lastMove.from) {
+                    squareEl.classList.add('last-move-source');
+                } else if (squareName === lastMove.to) {
+                    squareEl.classList.add('last-move-dest');
+                }
             }
 
             // Highlight Checkmate

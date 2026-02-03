@@ -103,8 +103,14 @@ header h1 {
     /* Let clicks pass to square */
 }
 
-.last-move {
+.last-move-source {
+    background-color: rgba(155, 199, 0, 0.2) !important;
+    /* Subtle */
+}
+
+.last-move-dest {
     background-color: rgba(155, 199, 0, 0.41) !important;
+    /* Distinct */
 }
 
 .checkmate {
@@ -475,14 +481,18 @@ select {
 
     .board-container {
         width: 95vw;
-        /* Height will auto-adjust based on content (board + bar) */
         max-width: 95vw;
+        /* Container fits content (board + bar) */
+        height: auto;
         flex: 0 0 auto;
         margin-top: 5px;
     }
 
     .board {
-        /* aspect-ratio handled in main rule */
+        width: 100%;
+        height: auto;
+        /* Let aspect ratio define height */
+        aspect-ratio: 1 / 1;
     }
 
     .game-bar {
