@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, remove, get, update } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -466,7 +467,7 @@ let isLeagueHost = false;
 // --- League Logic ---
 
 function createLeague() {
-    const name = document.getElementById('league-player-name').value.trim();
+    const name = currentUser ? currentUser.displayName : (document.getElementById('league-player-name').value.trim());
     if (!name) return alert('אנא הכנס שם');
     myPlayerName = name;
 
@@ -492,7 +493,7 @@ function createLeague() {
 }
 
 function joinLeague() {
-    const name = document.getElementById('league-player-name').value.trim();
+    const name = currentUser ? currentUser.displayName : (document.getElementById('league-player-name').value.trim());
     if (!name) return alert('אנא הכנס שם');
     myPlayerName = name;
 
@@ -756,11 +757,14 @@ function createGame() {
     const isCreatorWhite = Math.random() < 0.5;
     playerSide = isCreatorWhite ? 'white' : 'black';
 
+    // Auth Check
+    const creatorName = currentUser ? currentUser.displayName : (name || 'אורח');
+
     const initialGameData = {
         fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         pgn: '',
-        white: { name: isCreatorWhite ? name : 'ממתין...', wins: 0, time: 600 },
-        black: { name: isCreatorWhite ? 'ממתין...' : name, wins: 0, time: 600 },
+        white: { name: isCreatorWhite ? creatorName : 'ממתין...', wins: 0, time: 600 },
+        black: { name: isCreatorWhite ? 'ממתין...' : creatorName, wins: 0, time: 600 },
         turn: 'w',
         status: 'waiting',
         lastMove: null,
@@ -779,7 +783,7 @@ function createGame() {
 }
 
 function joinGame() {
-    const name = document.getElementById('player-name').value.trim() || 'שחקן 2';
+    const name = currentUser ? currentUser.displayName : (document.getElementById('player-name').value.trim() || 'שחקן 2');
     myPlayerName = name;
 
     const code = document.getElementById('game-code-input').value.trim();
@@ -792,16 +796,37 @@ function joinGame() {
         if (!data) return alert('המשחק לא נמצא');
 
         if (data.status === 'waiting') {
-            set(ref(db, `games/${code}/black/name`), name);
-            set(ref(db, `games/${code}/black/wins`), 0);
-            set(ref(db, `games/${code}/black/time`), 600);
+            const joinerSide = data.white.name === 'ממתין...' ? 'white' : 'black';
+
+            // If I am white (because creator was black), update white info
+            // If I am black (creator was white), update black info
+
+            // Wait, data.white.name is "Waiting..." if creator is black.
+            // So if data.white.name is 'Waiting...', I take White.
+
+            const mySide = (data.white.name === 'ממתין...') ? 'white' : 'black';
+
+            set(ref(db, `games/${code}/${mySide}/name`), name);
+            // Wins logic needs to fetch from user profile if auth?
+            // For now simple 0.
 
             set(ref(db, `games/${code}/status`), 'playing');
             set(ref(db, `games/${code}/lastMoveTime`), Date.now());
-        }
 
-        onlineGameId = code;
-        playerSide = 'black';
+            onlineGameId = code;
+            playerSide = mySide;
+
+        } else if (data.status === 'playing') {
+            // Maybe reconnecting? 
+            // Simple check if name matches?
+            if (data.white.name === name) playerSide = 'white';
+            else if (data.black.name === name) playerSide = 'black';
+            else return alert('המשחק מלא');
+
+            onlineGameId = code;
+        } else {
+            return alert('המשחק אינו זמין');
+        }
 
         setupOnlineGameUI();
         listenToGame(code);
@@ -1207,5 +1232,102 @@ function setupEventListeners() {
 // But 'deleteSequence' was used inline. We attached listener in updateSequencesListUI instead.
 // To be safe for any inline onclick remnants in HTML that might slip through (though I removed them in updateSequencesListUI logic above)
 window.preparePlayback = preparePlayback;
+
+
+// --- Authentication Logic ---
+const auth = getAuth(app);
+let currentUser = null;
+
+function login() {
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider)
+        .then((result) => {
+            // User signed in
+            console.log("User logged in:", result.user);
+        })
+        .catch((error) => {
+            console.error("Login failed:", error);
+            alert("התחברות נכשלה: " + error.message);
+        });
+}
+
+function logout() {
+    signOut(auth).then(() => {
+        // Sign-out successful.
+    }).catch((error) => {
+        console.error("Logout failed:", error);
+    });
+}
+
+// Auth Listener
+onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    updateAuthUI(user);
+
+    if (user) {
+        // Save/Update user in DB
+        const userRef = ref(db, 'users/' + user.uid);
+        get(userRef).then(snapshot => {
+            const userData = snapshot.val();
+            if (!userData) {
+                // First time
+                set(userRef, {
+                    name: user.displayName,
+                    email: user.email,
+                    photo: user.photoURL,
+                    wins: 0,
+                    joinedAt: Date.now()
+                });
+            } else {
+                // Update last seen or minimal info?
+                // For now just keep it simple.
+            }
+        });
+    }
+});
+
+function updateAuthUI(user) {
+    const loggedOutView = document.getElementById('logged-out-view');
+    const loggedInView = document.getElementById('logged-in-view');
+
+    // Inputs to hide/autofill
+    const nameInputs = [
+        document.getElementById('player-name'),
+        document.getElementById('league-player-name')
+    ];
+
+    if (user) {
+        loggedOutView.style.display = 'none';
+        loggedInView.style.display = 'flex';
+
+        document.getElementById('user-name').innerText = user.displayName;
+        document.getElementById('user-avatar').src = user.photoURL;
+
+        // Auto-fill names and hide inputs if desired
+        // Or just let them override? Better to hide to enforce identity.
+        nameInputs.forEach(input => {
+            if (input) {
+                input.value = user.displayName;
+                input.style.display = 'none';
+            }
+        });
+
+    } else {
+        loggedOutView.style.display = 'block';
+        loggedInView.style.display = 'none';
+
+        nameInputs.forEach(input => {
+            if (input) {
+                input.value = '';
+                input.style.display = 'block';
+            }
+        });
+    }
+}
+
+// Make sure to bind these new buttons!
+document.getElementById('login-btn').addEventListener('click', login);
+document.getElementById('logout-btn').addEventListener('click', logout);
+
 
 init();
