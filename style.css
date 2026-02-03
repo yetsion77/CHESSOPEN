@@ -107,6 +107,25 @@ header h1 {
     background-color: rgba(155, 199, 0, 0.41) !important;
 }
 
+.checkmate {
+    animation: pulse-red 1.5s infinite;
+    background-color: rgba(255, 0, 0, 0.6) !important;
+}
+
+@keyframes pulse-red {
+    0% {
+        background-color: rgba(255, 0, 0, 0.6);
+    }
+
+    50% {
+        background-color: rgba(255, 0, 0, 0.2);
+    }
+
+    100% {
+        background-color: rgba(255, 0, 0, 0.6);
+    }
+}
+
 .move-hint {
     background-color: var(--hint-color);
     border-radius: 50%;

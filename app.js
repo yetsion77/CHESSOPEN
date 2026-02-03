@@ -122,10 +122,18 @@ function renderBoard() {
                 squareEl.classList.add('last-move');
             }
 
+            // Highlight Checkmate
+            if (game.in_checkmate() && piece && piece.type === 'k' && piece.color === game.turn()) {
+                squareEl.classList.add('checkmate');
+            }
+
             squareEl.addEventListener('click', () => handleSquareClick(squareName));
             boardEl.appendChild(squareEl);
         }
     }
+
+    // Update material count whenever board renders
+    updateMaterialCount();
 }
 
 function handleSquareClick(square) {
@@ -284,7 +292,7 @@ function updateSequencesListUI(sequences) {
         li.querySelector('span:first-child').onclick = () => preparePlayback(name, sequences[name]);
 
         // Delete button
-        li.querySelector('.delete-seq').onclick = (e) => {
+        li.querySelector('span.delete-seq').onclick = (e) => {
             e.stopPropagation(); // prevent triggering parent click
             deleteSequence(name);
         };
@@ -944,6 +952,66 @@ function stopTimerInterval() {
     updateTimerUI();
 }
 
+const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const pieceIcons = {
+    p: '♟', n: '♞', b: '♝', r: '♜', q: '♛',
+    P: '♙', N: '♘', B: '♗', R: '♖', Q: '♕'
+};
+
+function updateMaterialCount() {
+    const board = game.board();
+    let whiteMaterial = 0;
+    let blackMaterial = 0;
+
+    // Simple count of pieces on board
+    let whitePieces = { p: 0, n: 0, b: 0, r: 0, q: 0 };
+    let blackPieces = { p: 0, n: 0, b: 0, r: 0, q: 0 };
+
+    for (let row of board) {
+        for (let piece of row) {
+            if (piece) {
+                if (piece.color === 'w') {
+                    whiteMaterial += pieceValues[piece.type];
+                    whitePieces[piece.type]++;
+                } else {
+                    blackMaterial += pieceValues[piece.type];
+                    blackPieces[piece.type]++;
+                }
+            }
+        }
+    }
+
+    // Calculate difference (Standard chess rules: 8P, 2N, 2B, 2R, 1Q)
+    const startPieces = { p: 8, n: 2, b: 2, r: 2, q: 1 };
+
+    let whiteCaptured = []; // Pieces white has captured (meaning black pieces missing)
+    let blackCaptured = []; // Pieces black has captured (meaning white pieces missing)
+
+    for (let type in startPieces) {
+        let count = startPieces[type];
+        // Missing black pieces = Captured by White
+        let missingBlack = Math.max(0, count - blackPieces[type]);
+        for (let i = 0; i < missingBlack; i++) whiteCaptured.push(pieceIcons[type]); // Black icons
+
+        // Missing white pieces = Captured by Black
+        let missingWhite = Math.max(0, count - whitePieces[type]);
+        for (let i = 0; i < missingWhite; i++) blackCaptured.push(pieceIcons[type.toUpperCase()]); // White icons
+    }
+
+    // Update UI
+    const whiteCapturedEl = document.getElementById('white-captured');
+    const blackCapturedEl = document.getElementById('black-captured');
+
+    if (whiteCapturedEl) {
+        whiteCapturedEl.innerHTML = whiteCaptured.join('');
+        whiteCapturedEl.style.color = '#ccc'; // Black pieces color
+    }
+    if (blackCapturedEl) {
+        blackCapturedEl.innerHTML = blackCaptured.join('');
+        blackCapturedEl.style.color = '#fff'; // White pieces color
+    }
+}
+
 function updateTimerUI() {
     const fmt = (t) => {
         const m = Math.floor(t / 60);
@@ -951,16 +1019,21 @@ function updateTimerUI() {
         return `${m}:${s < 10 ? '0' + s : s}`;
     };
 
-    const wEl = document.getElementById('white-timer');
-    const bEl = document.getElementById('black-timer');
+    const wEl = document.getElementById('timer-white');
+    const bEl = document.getElementById('timer-black');
 
-    if (wEl) {
+    if (wEl && bEl) {
         wEl.innerText = fmt(whiteTime);
-        wEl.style.color = whiteTime < 30 ? '#ff5252' : '#fff';
-    }
-    if (bEl) {
         bEl.innerText = fmt(blackTime);
-        bEl.style.color = blackTime < 30 ? '#ff5252' : '#fff';
+
+        // Active indicator
+        if (game.turn() === 'w') { // Use game.turn() for current turn
+            wEl.classList.add('active');
+            bEl.classList.remove('active');
+        } else {
+            bEl.classList.add('active');
+            wEl.classList.remove('active');
+        }
     }
 }
 
@@ -1068,6 +1141,10 @@ function setupOnlineGameUI() {
     // Always render to ensure correct orientation
     renderBoard();
     updateStatus();
+
+    // Show game bar
+    const bar = document.getElementById('game-bar');
+    if (bar) bar.style.display = 'flex';
 
     document.querySelector('#online-game-ui #white-player-name').innerText = (playerSide === 'white' ? myPlayerName : 'יריב');
 }
