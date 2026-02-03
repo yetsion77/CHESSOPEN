@@ -1,6 +1,5 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove, get, update } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+// --- Firebase Compat Shim ---
+// Imports removed to support local execution without a server
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
@@ -14,9 +13,29 @@ const firebaseConfig = {
     measurementId: "G-BTXWL50FR5"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+// Initialize Firebase (Compat)
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const app = firebase.app();
+const db = firebase.database();
+
+// --- Shims for Modular SDK to Compat ---
+function ref(db, path) { return path ? db.ref(path) : db.ref(); }
+function set(ref, val) { return ref.set(val); }
+function get(ref) { return ref.get(); }
+function update(ref, val) { return ref.update(val); }
+function remove(ref) { return ref.remove(); }
+function onValue(ref, cb, opts) {
+    if (opts && opts.onlyOnce) return ref.once('value', cb);
+    return ref.on('value', cb);
+}
+
+function getAuth() { return firebase.auth(); }
+function signInWithPopup(a, p) { return a.signInWithPopup(p); }
+function signOut(a) { return a.signOut(); }
+function onAuthStateChanged(a, cb) { return a.onAuthStateChanged(cb); }
+const GoogleAuthProvider = firebase.auth.GoogleAuthProvider;
 
 // --- App State ---
 // Ensure Chess is loaded globally
