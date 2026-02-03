@@ -935,10 +935,15 @@ function listenToGame(gameId) {
         const statusMsg = document.getElementById('online-status-msg');
         if (data.status === 'waiting') {
             statusMsg.innerText = 'ממתין ליריב...';
+            document.getElementById('resign-btn').style.display = 'none';
         } else if (data.status === 'playing') {
             const isMyTurn = (game.turn() === 'w' && playerSide === 'white') ||
                 (game.turn() === 'b' && playerSide === 'black');
             statusMsg.innerText = isMyTurn ? 'תורך!' : 'תור היריב';
+
+            // Show Resign Button
+            document.getElementById('resign-btn').style.display = 'block';
+            document.getElementById('rematch-btn').style.display = 'none';
         } else if (data.status === 'finished') {
             statusMsg.innerText = 'המשחק נגמר!';
 
