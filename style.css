@@ -453,28 +453,70 @@ select {
 @media (max-width: 800px) {
     .app-container {
         width: 100%;
-        padding: 10px 0;
+        padding: 5px 0;
+        height: 100vh;
+        overflow: hidden;
+        /* Prevent body scroll, handle inside controls */
+        justify-content: flex-start;
+    }
+
+    header h1 {
+        display: none;
+        /* Hide header to save space on mobile */
     }
 
     .main-content {
         flex-direction: column;
         align-items: center;
-        gap: 10px;
+        gap: 5px;
+        width: 100%;
+        height: 100%;
     }
 
     .board-container {
         width: 95vw;
-        height: 95vw;
+        /* Height will auto-adjust based on content (board + bar) */
         max-width: 95vw;
-        max-height: 95vw;
+        flex: 0 0 auto;
+        margin-top: 5px;
+    }
+
+    .board {
+        /* aspect-ratio handled in main rule */
+    }
+
+    .game-bar {
+        padding: 5px;
+        margin-top: 5px;
     }
 
     .controls-panel {
         width: 95%;
-        padding: 15px;
+        padding: 10px;
+        flex: 1;
+        /* Take remaining space */
+        min-width: 0;
+        max-height: none;
+        /* Let flex handle it */
+        overflow-y: auto;
+        border-radius: 8px 8px 0 0;
+        margin-bottom: 0;
     }
 
-    header h1 {
-        font-size: 1.5rem;
+    /* Ensure chat takes available space in controls */
+    #chat-container {
+        min-height: 150px;
+        flex: 1;
+    }
+
+    /* Make status box smaller */
+    .status-box {
+        padding: 5px;
+        margin-bottom: 10px;
+    }
+
+    .status-box h3 {
+        margin: 0;
+        font-size: 1em;
     }
 }

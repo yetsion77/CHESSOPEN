@@ -68,13 +68,18 @@ function init() {
 }
 
 // --- Board & Interaction ---
-function renderBoard() {
+function renderBoard(lastMoveOverride = null) {
     boardEl.innerHTML = '';
     const boardState = game.board();
 
     // Get last move for highlighting
-    const history = game.history({ verbose: true });
-    const lastMove = history.length > 0 ? history[history.length - 1] : null;
+    // If override provided (e.g. from online update), use it.
+    // Otherwise fallback to local history.
+    let lastMove = lastMoveOverride;
+    if (!lastMove) {
+        const history = game.history({ verbose: true });
+        lastMove = history.length > 0 ? history[history.length - 1] : null;
+    }
 
     const isBlackPerspective = (playerSide === 'black');
 
@@ -871,7 +876,8 @@ function listenToGame(gameId) {
         // Sync Game State
         if (data.fen !== game.fen()) {
             game.load(data.fen);
-            renderBoard();
+            // Must pass data.lastMove explicitly because game.load clears history
+            renderBoard(data.lastMove);
             updateStatus();
         }
 
