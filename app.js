@@ -63,6 +63,29 @@ let practiceMoveIndex = 0;
 // Local cache of sequences for playback/practice
 let localSequences = {};
 
+// Promotion State
+let pendingPromotion = null; // { from, to }
+
+function handlePromotionChoice(pieceType) {
+    if (!pendingPromotion) return;
+
+    const move = {
+        from: pendingPromotion.from,
+        to: pendingPromotion.to,
+        promotion: pieceType
+    };
+
+    document.getElementById('promotion-modal').style.display = 'none';
+    pendingPromotion = null;
+
+    const legalMove = game.move(move);
+    if (legalMove) {
+        onMoveMade(legalMove);
+    } else {
+        renderBoard(); // Reset view if something weird happened
+    }
+}
+
 // Piece Theme
 const pieces = {
     'wP': 'https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg',
@@ -192,6 +215,28 @@ function handleSquareClick(square) {
             highlightLegalMoves(square);
         }
     } else {
+        // Check for promotion before moving
+        // We know from and to. Is it a pawn moving to rank 8 or 1?
+        const piece = game.get(selectedSquare);
+        const isPawn = piece && piece.type === 'p';
+        const targetRank = parseInt(square[1]);
+        const isPromoRank = (piece.color === 'w' && targetRank === 8) || (piece.color === 'b' && targetRank === 1);
+
+        // We must verify it's a legal move first (with a dummy promotion) to ensure it's not an illegal move attempt
+        // Check if move is legal assuming promotion to Queen
+        const dummyMove = { from: selectedSquare, to: square, promotion: 'q' };
+        const moves = game.moves({ verbose: true });
+        const isLegal = moves.some(m => m.from === selectedSquare && m.to === square && m.flags.includes('p'));
+
+        if (isPawn && isPromoRank && isLegal) {
+            // Show Modal
+            pendingPromotion = { from: selectedSquare, to: square };
+            document.getElementById('promotion-modal').style.display = 'flex';
+            selectedSquare = null; // Clear selection UI behind modal
+            renderBoard();
+            return;
+        }
+
         const move = { from: selectedSquare, to: square, promotion: 'q' };
         const legalMove = game.move(move);
 
